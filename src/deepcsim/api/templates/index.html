@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Similarity Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .upload-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-box:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        
+        .upload-box.active {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .upload-box input[type="file"] {
+            display: none;
+        }
+        
+        .upload-label {
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .file-info {
+            margin-top: 10px;
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .analyze-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results-section {
+            padding: 30px;
+            display: none;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .comparison-table tbody tr {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .comparison-table tbody tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.01);
+        }
+        
+        .similarity-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .similarity-high {
+            background: #28a745;
+            color: white;
+        }
+        
+        .similarity-medium {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .similarity-low {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .code-viewer {
+            display: none;
+            margin-top: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .code-viewer.active {
+            display: block;
+        }
+        
+        .code-viewer-header {
+            background: #343a40;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .close-viewer {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .code-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .code-block {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+        
+        .code-block h4 {
+            color: #61dafb;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .highlight-line {
+            background: rgba(255, 193, 7, 0.3);
+            display: block;
+            margin: 0 -20px;
+            padding: 0 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .threshold-control {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .threshold-control label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .threshold-control input[type="range"] {
+            width: 200px;
+            vertical-align: middle;
+        }
+        
+        .threshold-value {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Code Similarity Analyzer</h1>
+            <p>Upload two Python files to compare function similarities</p>
+        </div>
+        
+        <div class="upload-section">
+            <div class="upload-grid">
+                <div class="upload-box" id="uploadBox1" onclick="document.getElementById('file1').click()">
+                    <input type="file" id="file1" accept=".py" onchange="handleFileSelect(1)">
+                    <span class="upload-label">📄 Select File 1</span>
+                    <div id="fileInfo1" class="file-info"></div>
+                </div>
+                
+                <div class="upload-box" id="uploadBox2" onclick="document.getElementById('file2').click()">
+                    <input type="file" id="file2" accept=".py" onchange="handleFileSelect(2)">
+                    <span class="upload-label">📄 Select File 2</span>
+                    <div id="fileInfo2" class="file-info"></div>
+                </div>
+            </div>
+            
+            <button class="analyze-btn" id="analyzeBtn" onclick="analyzeFiles()" disabled>
+                🚀 Analyze Similarity
+            </button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing code similarity...</p>
+        </div>
+        
+        <div class="results-section" id="results">
+            <div class="threshold-control">
+                <label for="threshold">Similarity Threshold:</label>
+                <input type="range" id="threshold" min="0" max="100" value="70" onchange="updateThreshold()">
+                <span class="threshold-value" id="thresholdValue">70%</span>
+                <span style="margin-left: 20px; color: #666;">Show functions with similarity ≥ threshold</span>
+            </div>
+            
+            <div class="stats-grid" id="stats"></div>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>File 1 Function</th>
+                        <th>File 2 Function</th>
+                        <th>Structural</th>
+                        <th>Semantic</th>
+                        <th>Metric</th>
+                        <th>Overall</th>
+                    </tr>
+                </thead>
+                <tbody id="comparisonBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="code-viewer" id="codeViewer">
+            <div class="code-viewer-header">
+                <h3>Function Comparison</h3>
+                <button class="close-viewer" onclick="closeViewer()">✕ Close</button>
+            </div>
+            <div class="code-comparison">
+                <div class="code-block" id="code1"></div>
+                <div class="code-block" id="code2"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let file1 = null;
+        let file2 = null;
+        let analysisResults = null;
+        let currentThreshold = 70;
+        
+        function handleFileSelect(fileNum) {
+            const fileInput = document.getElementById('file' + fileNum);
+            const file = fileInput.files[0];
+            
+            if (file) {
+                if (fileNum === 1) {
+                    file1 = file;
+                    document.getElementById('fileInfo1').textContent = '✓ ' + file.name;
+                    document.getElementById('uploadBox1').classList.add('active');
+                } else {
+                    file2 = file;
+                    document.getElementById('fileInfo2').textContent = '✓ ' + file.name;
+                    document.getElementById('uploadBox2').classList.add('active');
+                }
+                
+                document.getElementById('analyzeBtn').disabled = !(file1 && file2);
+            }
+        }
+        
+        async function analyzeFiles() {
+            if (!file1 || !file2) return;
+            
+            const formData = new FormData();
+            formData.append('file1', file1);
+            formData.append('file2', file2);
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+                
+                analysisResults = await response.json();
+                displayResults(analysisResults);
+                
+            } catch (error) {
+                alert('Error analyzing files: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+        
+        function displayResults(data) {
+            // Display stats
+            const statsHtml = `
+                <div class="stat-card">
+                    <h3>File 1 Functions</h3>
+                    <div class="value">${data.file1_functions}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>File 2 Functions</h3>
+                    <div class="value">${data.file2_functions}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg Similarity</h3>
+                    <div class="value">${data.avg_similarity.toFixed(1)}%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>High Similarity</h3>
+                    <div class="value">${data.high_similarity_count}</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
+            
+            // Display comparison table
+            updateComparisonTable();
+            
+            document.getElementById('results').classList.add('active');
+        }
+        
+        function updateComparisonTable() {
+            if (!analysisResults) return;
+            
+            const tbody = document.getElementById('comparisonBody');
+            tbody.innerHTML = '';
+            
+            const filtered = analysisResults.comparisons.filter(
+                c => c.similarity.composite >= currentThreshold
+            );
+            
+            filtered.sort((a, b) => b.similarity.composite - a.similarity.composite);
+            
+            filtered.forEach(comp => {
+                const row = document.createElement('tr');
+                row.onclick = () => showCodeComparison(comp);
+                
+                const getSimilarityClass = (score) => {
+                    if (score >= 80) return 'similarity-high';
+                    if (score >= 50) return 'similarity-medium';
+                    return 'similarity-low';
+                };
+                
+                row.innerHTML = `
+                    <td><strong>${comp.func1_name}</strong></td>
+                    <td><strong>${comp.func2_name}</strong></td>
+                    <td><span class="similarity-badge ${getSimilarityClass(comp.similarity.structural)}">${comp.similarity.structural}%</span></td>
+                    <td><span class="similarity-badge ${getSimilarityClass(comp.similarity.semantic)}">${comp.similarity.semantic}%</span></td>
+                    <td><span class="similarity-badge ${getSimilarityClass(comp.similarity.metric)}">${comp.similarity.metric}%</span></td>
+                    <td><span class="similarity-badge ${getSimilarityClass(comp.similarity.composite)}">${comp.similarity.composite}%</span></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px; color: #666;">No functions meet the similarity threshold</td></tr>';
+            }
+        }
+        
+        function updateThreshold() {
+            currentThreshold = parseInt(document.getElementById('threshold').value);
+            document.getElementById('thresholdValue').textContent = currentThreshold + '%';
+            updateComparisonTable();
+        }
+        
+        function showCodeComparison(comp) {
+            document.getElementById('code1').innerHTML = `
+                <h4>${comp.func1_name} (${analysisResults.file1_name})</h4>
+                <pre>${escapeHtml(comp.func1_source)}</pre>
+            `;
+            
+            document.getElementById('code2').innerHTML = `
+                <h4>${comp.func2_name} (${analysisResults.file2_name})</h4>
+                <pre>${escapeHtml(comp.func2_source)}</pre>
+            `;
+            
+            document.getElementById('codeViewer').classList.add('active');
+        }
+        
+        function closeViewer() {
+            document.getElementById('codeViewer').classList.remove('active');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

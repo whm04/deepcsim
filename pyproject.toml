@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepcsim"
+version = "0.1.1"
+description = "A code similarity analyzer using AST analysis."
+readme = "README.md"
+authors = [
+  { name = "Wahib Mzali", email = "mzaliwahib04@gmail.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "jinja2",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/whm04/deepcsim"
+"Bug Tracker" = "https://github.com/whm04/deepcsim/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = [
+    "requests>=2.32.5",
+    "twine>=6.2.0",
+]
+
+[project.scripts]
+deepcsim-server = "deepcsim.api.server:main"
+deepcsim-cli = "deepcsim.cli:main"
+
+[tool.setuptools]
+include-package-data = true

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEEPCSIM</title>
+
+    <link rel="stylesheet" href="/static/css/default.min.css">
+
+    <script src="/static/js/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1e1e1e;
+            color: #cccccc;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #cccccc;
+            font-weight: 600;
+        }
+
+        .explorer {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .explorer::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .explorer::-webkit-scrollbar-track {
+            background: #252526;
+        }
+
+        .explorer::-webkit-scrollbar-thumb {
+            background: #3e3e42;
+            border-radius: 5px;
+        }
+
+        .explorer::-webkit-scrollbar-thumb:hover {
+            background: #4e4e52;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background 0.1s ease;
+        }
+
+        .tree-item:hover {
+            background: #2a2d2e;
+        }
+
+        .tree-item.selected {
+            background: #094771;
+        }
+
+        .tree-item-content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chevron {
+            width: 16px;
+            height: 16px;
+            margin-right: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .chevron svg {
+            width: 12px;
+            height: 12px;
+            fill: #cccccc;
+        }
+
+        .chevron.expanded {
+            transform: rotate(90deg);
+        }
+
+        .chevron.hidden {
+            visibility: hidden;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .tree-label {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-children {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .tree-children.expanded {
+            max-height: 10000px;
+        }
+
+        .loading {
+            padding: 20px;
+            text-align: center;
+            color: #858585;
+            font-size: 13px;
+        }
+
+        .error {
+            padding: 20px;
+            color: #f48771;
+            font-size: 13px;
+        }
+
+        .main-content {
+            flex: 1;
+            background: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 12px 20px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            font-size: 13px;
+            color: #cccccc;
+        }
+
+        .content-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .content-body::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .content-body::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        .content-body::-webkit-scrollbar-thumb {
+            background: #3e3e42;
+            border-radius: 5px;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #858585;
+            font-size: 14px;
+        }
+
+        .file-details {
+            color: #cccccc;
+        }
+
+        .detail-section {
+            margin-bottom: 24px;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #858585;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 13px;
+            color: #cccccc;
+            margin-bottom: 4px;
+        }
+
+        .file-preview {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            color: #d4d4d4;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-icon-large {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-icon-large svg {
+            width: 48px;
+            height: 48px;
+        }
+
+        /* File type colors */
+        .icon.python {
+            fill: #3776ab;
+        }
+
+        .icon.javascript {
+            fill: #f7df1e;
+        }
+
+        .icon.html {
+            fill: #e34c26;
+        }
+
+        .icon.css {
+            fill: #264de4;
+        }
+
+        .icon.json {
+            fill: #f7df1e;
+        }
+
+        .icon.markdown {
+            fill: #519aba;
+        }
+
+        .icon.image {
+            fill: #66d9ef;
+        }
+
+        .icon.folder {
+            fill: #dcb67a;
+        }
+
+        .icon.folder-open {
+            fill: #dcb67a;
+        }
+
+        .icon.file {
+            fill: #858585;
+        }
+
+        /* Code Viewer Styles */
+        .code-viewer {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            height: 90%;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            /* Initially hidden */
+            flex-direction: column;
+            border-radius: 8px;
+        }
+
+        .code-viewer.active {
+            display: flex;
+            /* Changed to flex for proper layout */
+        }
+
+        .code-viewer-header {
+            padding: 15px;
+            background: #252526;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-viewer-title {
+            color: #cccccc;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .close-viewer {
+            background: #c42b1c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .close-viewer:hover {
+            background: #e81123;
+        }
+
+        .code-comparison {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            padding: 15px;
+            gap: 15px;
+        }
+
+        .code-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+        }
+
+        .code-column-header {
+            padding: 8px 12px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            color: #cccccc;
+            font-size: 12px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .code-block {
+            flex: 1;
+            padding: 15px;
+            overflow: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            color: #d4d4d4;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .clickable-row:hover {
+            background: #2a2d2e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">Explorer</div>
+            <div class="explorer" id="explorer">
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="content-header" id="contentHeader" style="display: none;"></div>
+            <div class="content-body" id="contentBody">
+                <div class="empty-state">Select a file to view details</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Viewer Overlay -->
+    <!-- Code Viewer Overlay -->
+    <div class="code-viewer" id="codeViewer">
+        <div class="code-viewer-header">
+            <div class="code-viewer-title">Function Comparison</div>
+            <button class="close-viewer" onclick="closeViewer()">✕ Close</button>
+        </div>
+        <div class="code-comparison">
+            <div class="code-column">
+                <div class="code-column-header" id="header1">Target Function</div>
+                <pre class="code-block" id="pre1"><code class="language-python" id="code1"></code></pre>
+            </div>
+            <div class="code-column">
+                <div class="code-column-header" id="header2">Match Function</div>
+                <pre class="code-block" id="pre2"><code class="language-python" id="code2"></code></pre>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        let selectedItem = null;
+        let currentFileData = null; // Store current file data to access matches later
+
+        const icons = {
+            folder: `<svg viewBox="0 0 16 16"><path d="M14.5 3H7.71l-.85-.85L6.51 2h-5l-.5.5v11l.5.5h13l.5-.5v-10L14.5 3zm-.51 8.49V13h-12V7h4.49l.35-.35.86-.86L8.04 5.5h5.95v6.49z"/></svg>`,
+            folderOpen: `<svg viewBox="0 0 16 16"><path d="M14.5 3H7.71l-.85-.85L6.51 2h-5l-.5.5v11l.5.5h13l.5-.5v-10L14.5 3zm-.51 8.49V13h-12V7h4.49l.35-.35.86-.86L8.04 5.5h5.95v6.49z"/></svg>`,
+            file: `<svg viewBox="0 0 16 16"><path d="M13.71 4.29l-3-3L10 1H4L3 2v12l1 1h9l1-1V5l-.29-.71zM13 14H4V2h5v4h4v8z"/></svg>`,
+            python: `<svg viewBox="0 0 16 16"><path d="M8 1C4.686 1 5 2.686 5 2.686V5h3v.5H3.5S1 5.186 1 8.5s2.186 3.5 2.186 3.5H5V10s-.186-2.186 2.186-2.186h3.628S13 7.814 13 5.5V3.186S13.314 1 8 1zM6.5 2.5a.5.5 0 1 1 0 1 .5.5 0 0 1 0-1zm2 11.5c-3.314 0-3 1.686-3 1.686V13h3v-.5h4.5S15 12.814 15 9.5 12.814 6 12.814 6H11v2s.186 2.186-2.186 2.186H5.186S3 10.186 3 12.5v2.314S2.686 17 8 17c3.314 0 3-1.686 3-1.686V13h-3v.5H3.5S1 13.814 1 10.5 3.186 7 3.186 7H5V5s-.186-2.186 2.186-2.186h3.628S13 2.814 13 5.128V7.5s.314 2.186-2.186 2.186z"/></svg>`,
+            javascript: `<svg viewBox="0 0 16 16"><path d="M3 3v10h10V3H3zm8.5 8h-1.25v.75h-.5V11h-.5v.75h-.5V11h-.5v2h2.75v-.5h.5v-1.5zm-3.5 0h-1v-1.5h-.5v2H5.5v-2H5v2h1v-.5h.5V9H5v-.5h3V11z"/></svg>`,
+            html: `<svg viewBox="0 0 16 16"><path d="M4 2v12h8V2H4zm6.5 10.5h-5v-9h5v9z"/></svg>`,
+            css: `<svg viewBox="0 0 16 16"><path d="M4 2v12h8V2H4zm6.5 10.5h-5v-9h5v9z"/></svg>`,
+            json: `<svg viewBox="0 0 16 16"><path d="M6 2.984V2h-.09c-.313 0-.616.062-.909.185a2.33 2.33 0 0 0-.775.53 2.23 2.23 0 0 0-.493.753v.001a3.542 3.542 0 0 0-.198.83v.002a6.08 6.08 0 0 0-.024.863c.012.29.018.58.018.87 0 .29-.006.58-.018.87a6.08 6.08 0 0 0 .024.863 3.542 3.542 0 0 0 .198.83 2.23 2.23 0 0 0 .493.753c.218.223.482.407.775.53.293.123.596.185.909.185H6v-.984h-.09c-.2 0-.387-.038-.562-.115a1.613 1.613 0 0 1-.457-.32 1.659 1.659 0 0 1-.309-.467c-.074-.18-.11-.37-.11-.573V3.897c0-.203.036-.393.11-.573a1.659 1.659 0 0 1 .309-.467c.131-.133.281-.237.457-.32A1.29 1.29 0 0 1 5.91 2.4H6v-.415zm4 10.032V14h.09c.313 0 .616-.062.909-.185.293-.123.557-.307.775-.53a2.23 2.23 0 0 0 .493-.753 3.542 3.542 0 0 0 .198-.83 6.08 6.08 0 0 0 .024-.863c-.012-.29-.018-.58-.018-.87 0-.29.006-.58.018-.87a6.08 6.08 0 0 0-.024-.863 3.542 3.542 0 0 0-.198-.83 2.23 2.23 0 0 0-.493-.753 2.33 2.33 0 0 0-.775-.53A2.325 2.325 0 0 0 10.09 2H10v.984h.09c.2 0 .387.038.562.115.175.083.325.187.457.32.127.134.23.29.309.467.074.18.11.37.11.573v5.103c0 .203-.036.393-.11.573a1.659 1.659 0 0 1-.309.467c-.132.133-.282.237-.457.32a1.29 1.29 0 0 1-.562.115H10v.984z"/></svg>`,
+            markdown: `<svg viewBox="0 0 16 16"><path d="M3 3v10h10V3H3zm8.5 7.5H10V8.25L8.5 10 7 8.25v2.25H5.5v-5h1.25L8.5 7.5l1.75-2.25h1.25v5z"/></svg>`,
+            image: `<svg viewBox="0 0 16 16"><path d="M2.75 2a.75.75 0 0 0-.75.75v10.5c0 .414.336.75.75.75h10.5a.75.75 0 0 0 .75-.75V2.75a.75.75 0 0 0-.75-.75H2.75zM12 11.5l-2.5-2.5-2 2-1.5-1.5L3.5 12V3.5h9V11.5z"/></svg>`,
+        };
+
+        function getIcon(type, isOpen = false) {
+            if (type === 'folder') {
+                return isOpen ? icons.folderOpen : icons.folder;
+            }
+            return icons[type] || icons.file;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function formatDate(timestamp) {
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleString();
+        }
+
+        function showCodeComparison(matchIndex, compIndex) {
+            if (!currentFileData || !currentFileData.similar_files) return;
+
+            const match = currentFileData.similar_files[matchIndex];
+            if (!match) return;
+
+            const comp = match.comparisons[compIndex];
+            if (!comp) return;
+
+            document.getElementById('header1').textContent = `${comp.func1_name} (${currentFileData.name})`;
+            document.getElementById('header2').textContent = `${comp.func2_name} (${match.relative_path})`;
+
+            const code1 = document.getElementById('code1');
+            const code2 = document.getElementById('code2');
+
+            code1.textContent = comp.func1_source;
+            code2.textContent = comp.func2_source;
+
+            // Trigger syntax highlighting
+            hljs.highlightElement(code1);
+            hljs.highlightElement(code2);
+
+            document.getElementById('codeViewer').classList.add('active');
+        }
+
+        function closeViewer() {
+            document.getElementById('codeViewer').classList.remove('active');
+        }
+
+        async function displayFileDetails(filepath, isDirectory) {
+            const contentHeader = document.getElementById('contentHeader');
+            const contentBody = document.getElementById('contentBody');
+
+            contentBody.innerHTML = '<div class="loading">Loading file details...</div>';
+            contentHeader.style.display = 'block';
+
+            try {
+                // Send the full path via POST to avoid URL encoding issues
+                const response = await fetch(`${API_BASE}/file-info/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: filepath })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    contentBody.innerHTML = `<div class="error">${data.error}</div>`;
+                    return;
+                }
+
+                currentFileData = data; // Store data for global access
+
+                if (data.type === 'python') {
+                    contentHeader.textContent = `Similarity Report: ${data.name}`;
+
+                    if (!data.similar_files || data.similar_files.length === 0) {
+                        contentBody.innerHTML = '<div class="empty-state">No similar files found (Threshold: 40%)</div>';
+                        return;
+                    }
+
+                    let reportHTML = `
+                        <div style="margin-bottom: 20px;">
+                            <div class="detail-label">Analyzing ${data.name} against project files...</div>
+                            <div class="detail-value">Found ${data.similar_files.length} similar files</div>
+                        </div>
+                    `;
+
+                    data.similar_files.forEach((match, matchIndex) => {
+                        reportHTML += `
+                            <div class="detail-section" style="background: #252526; border-radius: 6px; overflow: hidden; margin-bottom: 15px;">
+                                <div style="padding: 12px; background: #2d2d30; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                    <div style="font-weight: bold; color: #dcdcdc;">
+                                        <span class="icon python" style="display:inline-block; vertical-align:middle; width:16px;">${getIcon('python')}</span> 
+                                        ${match.relative_path}
+                                    </div>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <span class="similarity-badge" style="background: ${match.similarity >= 80 ? '#28a745' : '#ffc107'}; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px;">
+                                            ${match.similarity}% Match
+                                        </span>
+                                        <span style="font-size: 11px; color: #858585;">▼</span>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: none; padding: 15px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                        <div style="background: #1e1e1e; padding: 8px; border-radius: 4px;">
+                                            <div class="detail-label">Avg Function Similarity</div>
+                                            <div class="detail-value">${match.avg_similarity}%</div>
+                                        </div>
+                                        <div style="background: #1e1e1e; padding: 8px; border-radius: 4px;">
+                                            <div class="detail-label">High Similarity Funcs</div>
+                                            <div class="detail-value">${match.high_similarity_count}</div>
+                                        </div>
+                                    </div>
+
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                        <thead>
+                                            <tr style="text-align: left; color: #858585; border-bottom: 1px solid #3e3e42;">
+                                                <th style="padding: 8px;">Target Function</th>
+                                                <th style="padding: 8px;">Match Function</th>
+                                                <th style="padding: 8px;">Score</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${match.comparisons.map((comp, compIndex) => `
+                                                <tr class="clickable-row" onclick="showCodeComparison(${matchIndex}, ${compIndex})" style="border-bottom: 1px solid #3e3e42;">
+                                                    <td style="padding: 8px;">${comp.func1_name} <span style="color:#666">(${comp.func1_lines})</span></td>
+                                                    <td style="padding: 8px;">${comp.func2_name} <span style="color:#666">(${comp.func2_lines})</span></td>
+                                                    <td style="padding: 8px;">
+                                                        <span style="color: ${comp.similarity.composite >= 80 ? '#4caf50' : '#dcdcdc'}">
+                                                            ${comp.similarity.composite}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    contentBody.innerHTML = reportHTML;
+                    return;
+                }
+
+                contentHeader.textContent = data.name;
+
+                let detailsHTML = `
+                    <div class="file-details">
+                        <div class="file-icon-large ${data.type}">
+                            ${getIcon(data.type, false)}
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-label">Name</div>
+                            <div class="detail-value">${data.name}</div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-label">Size</div>
+                            <div class="detail-value">${formatBytes(data.size)}</div>
+                        </div>
+
+                        <div class="detail-section">
+                            <div class="detail-label">Modified</div>
+                            <div class="detail-value">${formatDate(data.modified)}</div>
+                        </div>
+                `;
+
+                detailsHTML += '</div>';
+
+                contentBody.innerHTML = detailsHTML;
+
+            } catch (error) {
+                console.error('Error loading file details:', error);
+                contentBody.innerHTML = '<div class="error">Error loading file details</div>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function createTreeItem(item, level = 0, parentPath = '') {
+            const div = document.createElement('div');
+            div.style.paddingLeft = `${level * 12}px`;
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'tree-item';
+            itemDiv.dataset.path = item.path;
+            itemDiv.dataset.isDirectory = item.isDirectory;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'tree-item-content';
+
+            const chevron = document.createElement('div');
+            chevron.className = `chevron ${item.isDirectory ? '' : 'hidden'}`;
+            chevron.innerHTML = `<svg viewBox="0 0 16 16"><path d="M6 4l4 4-4 4V4z"/></svg>`;
+
+            const icon = document.createElement('div');
+            icon.className = `icon ${item.type}`;
+            icon.innerHTML = getIcon(item.type, false);
+
+            const label = document.createElement('div');
+            label.className = 'tree-label';
+            label.textContent = item.name;
+
+            contentDiv.appendChild(chevron);
+            contentDiv.appendChild(icon);
+            contentDiv.appendChild(label);
+            itemDiv.appendChild(contentDiv);
+
+            if (item.isDirectory) {
+                const childrenDiv = document.createElement('div');
+                childrenDiv.className = 'tree-children';
+
+                itemDiv.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+
+                    if (selectedItem) {
+                        selectedItem.classList.remove('selected');
+                    }
+                    itemDiv.classList.add('selected');
+                    selectedItem = itemDiv;
+
+                    const isExpanded = chevron.classList.contains('expanded');
+
+                    if (!isExpanded && childrenDiv.children.length === 0) {
+                        try {
+                            // Ensure we have a valid path to query
+                            // For root items, item.path should work. 
+                            // For nested items, we need the logic provided in the example, or simpler:
+                            const targetPath = item.path;
+
+                            // We need to send a request relative to the current folder
+                            // The API expects a full path or a relative path from the root.
+                            // Let's assume the API handles it.
+                            const response = await fetch(`${API_BASE}/files/${encodeURIComponent(targetPath)}`);
+                            const data = await response.json();
+
+                            if (data.children && data.children.length > 0) {
+                                data.children.forEach(child => {
+                                    const childElement = createTreeItem(child, level + 1, item.path);
+                                    childrenDiv.appendChild(childElement);
+                                });
+                            } else {
+                                const emptyDiv = document.createElement('div');
+                                emptyDiv.className = 'tree-item';
+                                emptyDiv.style.paddingLeft = `${(level + 1) * 12}px`;
+                                emptyDiv.style.color = '#858585';
+                                emptyDiv.style.fontSize = '12px';
+                                emptyDiv.textContent = 'Empty folder';
+                                childrenDiv.appendChild(emptyDiv);
+                            }
+                        } catch (error) {
+                            console.error('Error loading folder:', error);
+                        }
+                    }
+
+                    chevron.classList.toggle('expanded');
+                    childrenDiv.classList.toggle('expanded');
+                    icon.innerHTML = getIcon(item.type, chevron.classList.contains('expanded'));
+                });
+
+                div.appendChild(itemDiv);
+                div.appendChild(childrenDiv);
+            } else {
+                itemDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (selectedItem) {
+                        selectedItem.classList.remove('selected');
+                    }
+                    itemDiv.classList.add('selected');
+                    selectedItem = itemDiv;
+
+                    // Display file details
+                    displayFileDetails(item.path, false);
+                });
+
+                div.appendChild(itemDiv);
+            }
+
+            return div;
+        }
+
+        async function loadRootFiles() {
+            const explorer = document.getElementById('explorer');
+
+            try {
+                // Load root files
+                const response = await fetch(`${API_BASE}/files/`);
+                const data = await response.json();
+
+                explorer.innerHTML = '';
+
+                if (data.children && data.children.length > 0) {
+                    data.children.forEach(item => {
+                        const element = createTreeItem(item, 0, data.path);
+                        explorer.appendChild(element);
+                    });
+                } else {
+                    explorer.innerHTML = '<div class="loading">No files found</div>';
+                }
+            } catch (error) {
+                console.error('Error loading files:', error);
+                explorer.innerHTML = '<div class="error">Error loading files. Ensure server is running.</div>';
+            }
+        }
+
+        loadRootFiles();
+    </script>
+</body>
+
+</html>

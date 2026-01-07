@@ -2,6 +2,10 @@
 
 DeepCSIM is a Python library and tool for analyzing code similarity between Python files using Abstract Syntax Tree (AST) analysis. It can detect structural and semantic similarities.
 
+![Python Versions](https://img.shields.io/badge/python-3.11|3.12|3.13-brightgreen?logo=python&logoColor=white)
+
+![Demo of DeepCSim](assets/demo_deepcsim.gif)
+
 ## Installation
 
 ```bash
